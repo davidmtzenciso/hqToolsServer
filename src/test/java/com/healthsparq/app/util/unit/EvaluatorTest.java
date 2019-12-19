@@ -25,7 +25,7 @@ public class EvaluatorTest {
 		final Boolean itExists = evaluator.isExistingSchema(name);
 		
 		//then it should fail
-		Assertions.assertTrue(itExists);
+		Assertions.assertFalse(itExists);
 	}
 	
 	@Test
@@ -51,7 +51,7 @@ public class EvaluatorTest {
 		final Boolean itExists = evaluator.isExistingSchema(name);
 		
 		//then it should failed
-		Assertions.assertTrue(itExists);
+		Assertions.assertFalse(itExists);
 	}
 	
 	@Test
@@ -64,7 +64,7 @@ public class EvaluatorTest {
 		final Boolean itExists = evaluator.isExistingSchema(name);
 		
 		//then it should failed
-		Assertions.assertTrue(itExists);
+		Assertions.assertFalse(itExists);
 	}
 	
 	@Test
