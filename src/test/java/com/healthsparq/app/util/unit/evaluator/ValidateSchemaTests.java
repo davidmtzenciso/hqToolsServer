@@ -1,4 +1,4 @@
-package com.healthsparq.app.util.unit;
+package com.healthsparq.app.util.unit.evaluator;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -10,7 +10,7 @@ import com.healthsparq.app.util.Evaluator;
 
 
 @SpringBootTest
-public class EvaluatorTest {
+public class ValidateSchemaTests {
 
 	@Autowired
 	private Evaluator evaluator;
@@ -68,7 +68,7 @@ public class EvaluatorTest {
 	}
 	
 	@Test
-	public void given_schema_name_follows_all_the_rules_whenwhen_the_name_is_validated_then_it_should_pass() {
+	public void given_schema_name_follows_all_the_rules_when_the_name_is_validated_then_it_should_pass() {
 
 		//given the name follows all the rules
 		final String name = "xproduct";
@@ -79,4 +79,6 @@ public class EvaluatorTest {
 		//then it should pass
 		Assertions.assertTrue(itExists);
 	}
+	
+	
 }
