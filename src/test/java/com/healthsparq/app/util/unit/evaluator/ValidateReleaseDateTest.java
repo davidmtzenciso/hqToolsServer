@@ -8,7 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import com.healthsparq.app.util.Evaluator;
 
 @SpringBootTest
-public class ValidateReleaseDate {
+public class ValidateReleaseDateTest {
 
 	@Autowired
 	private Evaluator evaluator;

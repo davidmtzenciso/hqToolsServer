@@ -10,7 +10,7 @@ import com.healthsparq.app.util.Evaluator;
 
 
 @SpringBootTest
-public class ValidateSchemaTests {
+public class ValidateSchemaTest {
 
 	@Autowired
 	private Evaluator evaluator;
