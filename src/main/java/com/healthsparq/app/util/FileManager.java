@@ -2,7 +2,7 @@ package com.healthsparq.app.util;
 
 import org.springframework.stereotype.Component;
 
-import com.healthsparq.app.model.Ticket;
+import com.healthsparq.app.model.jira.Ticket;
 
 @Component
 public class FileManager {
