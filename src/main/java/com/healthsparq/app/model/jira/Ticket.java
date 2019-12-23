@@ -1,4 +1,4 @@
-package com.healthsparq.app.model;
+package com.healthsparq.app.model.jira;
 
 import org.springframework.stereotype.Component;
 
