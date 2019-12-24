@@ -10,7 +10,8 @@ public class Ticket {
 	private int number;
 	private String label;
 	private String customer;
-	
+	private String author;
+	private int version;
 	
 	public String getTitle() {
 		return title;
@@ -42,8 +43,17 @@ public class Ticket {
 	public void setCustomer(String customer) {
 		this.customer = customer;
 	}
-	
-	
-	
+	public String getAuthor() {
+		return author;
+	}
+	public void setAuthor(String author) {
+		this.author = author;
+	}
+	public int getVersion() {
+		return version;
+	}
+	public void setVersion(int version) {
+		this.version = version;
+	}
 	
 }
