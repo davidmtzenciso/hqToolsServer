@@ -20,9 +20,9 @@ import com.healthsparq.app.exceptions.PrimitiveTypeNotSupportedException;
 import com.healthsparq.app.exceptions.RelationNotSupportedException;
 
 @Component
-public class Generator {
+public class SQLTranslator {
 	
-	public String sqlInsertStmt(Object obj) throws NoSuchFieldException, SecurityException, 
+	public String toInsert(Object obj) throws NoSuchFieldException, SecurityException, 
 													MetadataNotPresentException, IllegalAccessException, 
 													IllegalArgumentException, InvocationTargetException, 
 													NoSuchMethodException, PrimitiveTypeNotSupportedException, 
@@ -33,7 +33,7 @@ public class Generator {
 		return 
 			new StringBuilder()
 				.append("INSERT INTO ").append(cls.getAnnotation(Table.class).name())
-				.append(getColumns(fields)).append("\nVALUES( ").append(getValues(cls, fields, obj)).toString();
+				.append(getColumns(fields)).append("\nVALUES( ").append(getValues(cls, fields, obj)).append(");").toString();
 	}
 	
 	private String getColumns(List<Field> fields) throws NoSuchFieldException, SecurityException, MetadataNotPresentException {
@@ -80,8 +80,10 @@ public class Generator {
 																					NoSuchFieldException, NoValuePresentException, 
 																					RelationNotSupportedException, MetadataNotPresentException {
 		var builder = new StringBuilder();
+		Field field;
 		
-		for(Field field : fields) {
+		for(int i=0; i < fields.size(); i++) {
+			field = fields.get(i);
 			if(field.isAnnotationPresent(Column.class)) {
 				builder.append(getValueFromColumn(field, target, cls));
 			} else if(field.isAnnotationPresent(ManyToOne.class)) {
@@ -92,8 +94,9 @@ public class Generator {
 			} else {
 				throw new RelationNotSupportedException("Relation OneToMany and OneToOne aren't supported yet!");
 			}
+			
+			builder.append(( i < fields.size() -1 ? ", ":" "));
 		}
-		
 		return builder.toString();
 	}
 	
@@ -101,24 +104,37 @@ public class Generator {
 																		IllegalAccessException, IllegalArgumentException, 
 																		InvocationTargetException, NoSuchMethodException, 
 																		NoValuePresentException, MetadataNotPresentException {
-		var builder = new StringBuilder();
 		var foreignField = cls.getDeclaredField(foreingFieldName);
 		var fieldWithValue  = findField(cls, target);
+		String table;
+		String resultColumn;
+		String queryColumn;
+		Object queryValue;
 		
 		if(cls.isAnnotationPresent(Table.class)) {	
-			if(fieldWithValue.getClass().isAnnotationPresent(Column.class)) {
-				if(fieldWithValue.getClass().getSimpleName().equals(foreignField.getType().getSimpleName())) {
-					
-				} else {
-					builder.append(foreignField.getAnnotation(Column.class).name());
-				}
-				builder.append("SELECT ");
-				builder.append(" FROM ").append(cls.getAnnotation(Table.class).name())
-				   	   .append("\nWHERE ");
+			table = cls.getAnnotation(Table.class).name();
+			if(foreignField.isAnnotationPresent(Column.class)) {
+				resultColumn = foreignField.getAnnotation(Column.class).name();
+			} else {
+				throw new MetadataNotPresentException("Field reference by ForeingKey annotation missing Column or relationship annotation");
+			}
+			if(fieldWithValue.getKey().getType().isAnnotationPresent(Column.class)) {
+				queryColumn = fieldWithValue.getKey().getType().getAnnotation(Column.class).name();
+				queryValue = fieldWithValue.getValue();
+			} else {
+				throw new MetadataNotPresentException("Field with value missing Column or relationship annotation");
 			}
 		} else {
 			throw new MetadataNotPresentException("Table annotations is missing in class: " + cls.getSimpleName());
 		}
+		return formStmt(table, resultColumn, queryColumn, queryValue);
+	}
+	
+	String formStmt(String table, String resultColumn, String queryColumn, Object value) {
+		var builder = new StringBuilder();
+		
+		builder.append("( SELECT ").append(resultColumn).append(" FROM ").append(table)
+				.append("WHERE ").append(queryColumn).append("=").append(value).append(" )");
 		return builder.toString();
 	}
 	
