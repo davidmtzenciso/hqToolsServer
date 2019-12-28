@@ -13,7 +13,7 @@ import com.healthsparq.app.annotations.Ignore;
 import com.healthsparq.app.model.xprod.Product;
 
 @Entity
-@Table(name="CLIENT_CONFGR", catalog="xproduct")
+@Table(name="CLIENT_CONFGR")
 public class ClientConfgr implements Serializable {
 
 	@Id
@@ -25,6 +25,7 @@ public class ClientConfgr implements Serializable {
 	private Client client;
 	
 	@ManyToOne(optional=false)
+	@ForeignKey(field="id")
 	private Product product;
 	
 	@Column(name="CONFGR_KEY", nullable=false)

@@ -11,7 +11,7 @@ import javax.persistence.Table;
 import com.healthsparq.app.model.xprod.client.Client;
 
 @Entity
-@Table(name="PROMO", catalog="xproduct")
+@Table(name="PROMO")
 public class Promo implements Serializable {
 
 	@Id

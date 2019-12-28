@@ -10,7 +10,7 @@ import javax.persistence.Table;
 import com.healthsparq.app.annotations.Ignore;
 
 @Entity
-@Table(name="CLIENT", catalog="xproduct")
+@Table(name="CLIENT")
 public class Client implements Serializable {
 
 	@Id

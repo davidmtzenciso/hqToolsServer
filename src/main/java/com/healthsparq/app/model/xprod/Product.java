@@ -7,8 +7,10 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
+import com.healthsparq.app.annotations.Ignore;
+
 @Entity
-@Table(name="PRODUCT", catalog="xproduct")
+@Table(name="PRODUCT")
 public class Product implements Serializable {
 
 	@Id
@@ -18,5 +20,24 @@ public class Product implements Serializable {
 	@Column(name="PRODUCT_NAME")
 	private String name;
 	
+	@Ignore
 	private static final long serialVersionUID = 1L;
+
+	public Integer getId() {
+		return id;
+	}
+
+	public void setId(Integer id) {
+		this.id = id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+	
+	
 }

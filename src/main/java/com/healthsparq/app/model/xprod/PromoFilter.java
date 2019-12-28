@@ -9,7 +9,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 @Entity
-@Table(name="PROMO_FILTER", catalog="xproduct")
+@Table(name="PROMO_FILTER")
 public class PromoFilter implements Serializable {
 
 	@Id
