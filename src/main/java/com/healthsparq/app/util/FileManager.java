@@ -7,6 +7,12 @@ import javax.annotation.PostConstruct;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 import org.w3c.dom.Node;
@@ -20,6 +26,7 @@ import com.healthsparq.app.model.jira.Ticket;
 public class FileManager {
 	
 	private DocumentBuilder builder;
+	private String lqbPath;
 	
 	@PostConstruct
 	public void init() throws ParserConfigurationException {
@@ -27,41 +34,51 @@ public class FileManager {
 		DocumentBuilderFactory.newInstance();
 	    builder = factory.newDocumentBuilder();
 	}
+	
+	public void setLqbPath(String path) {
+		this.lqbPath = path;
+	}
 
 	public String createClientDir(String name) {
 		return null;
 	}
 	
-	public String createLqbLog(Ticket ticket, String schema) throws SAXException, IOException {
+	public String createLqbLog(Ticket ticket, String schema, String query) throws SAXException, IOException, TransformerException {
 		Document template = builder.parse(new File("db-changelog-template.xml"));
-		StringBuilder strBuilder = new StringBuilder();
 		Node changeSet;
 		Node comment;
 		Node sql;
 		
-		changeSet = createChangeSet(template.getElementsByTagName("changeSet").item(0), ticket);
-		return null;
-	}
-	
-	private Node createChangeSet(Node changeSet, Ticket ticket) {
-		final String prefix = "db.changelog";
-		StringBuilder idBuilder = new StringBuilder();
-
-		idBuilder = new StringBuilder()
-				 .append(prefix).append("-")
-				 .append(ticket.getLabel()).append(".")
-				 .append(ticket.getType()).append("-")
-				 .append(ticket.getNumber()).append(".")
-				 .append(ticket.getVersion());		
-		
-		((Element) changeSet).setAttribute("id", idBuilder.toString());
+		changeSet = template.getElementsByTagName("changeSet").item(0);
+		((Element) changeSet).setAttribute("id", getFileName(ticket));
 		((Element) changeSet).setAttribute("author", ticket.getAuthor());
-		return changeSet;
+		
+		comment = template.getElementsByTagName("comment").item(0);
+		((Element) comment).setTextContent(ticket.getTitle());
+		
+		sql = template.getElementsByTagName("sql").item(0);
+		((Element) sql).setTextContent(new StringBuilder().append("\n\t\t<![CDATA[").append(query)
+														  .append("COMMIT;\r\n\t\t]]>").toString());
+		createXmlFile(template, this.lqbPath + getFileName(ticket) + ".xml");
+		return sql.getTextContent();
 	}
 	
-	private Node createComment(Node node) {
-		return null;
+	private String getFileName(Ticket ticket) {
+		return
+			new StringBuilder()
+				.append("db-changelog-").append(ticket.getLabel()).append(".")
+				.append(ticket.getType()).append("-").append(ticket.getNumber())
+				.append(".").append(ticket.getVersion()).toString();
 	}
+	
+	private void createXmlFile(Document document, String path) throws TransformerException {
+		TransformerFactory transformerFactory = TransformerFactory.newInstance();
+		Transformer transformer = transformerFactory.newTransformer();
+		DOMSource source = new DOMSource(document);
+		StreamResult result = new StreamResult(new File(path));
+		transformer.transform(source, result);
+	}
+	
 	
 	public String createJson(String type, Ticket ticket ) {
 		return null;

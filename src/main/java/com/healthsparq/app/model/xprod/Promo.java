@@ -15,6 +15,7 @@ import com.healthsparq.app.model.xprod.client.Client;
 public class Promo implements Serializable {
 
 	@Id
+	@Column(name="PROMO_ID")
 	private Integer id;
 	
 	@Column(name="PROMO_KEY", nullable=false, length=55)

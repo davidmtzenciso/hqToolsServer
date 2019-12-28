@@ -8,6 +8,7 @@ import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
+import com.healthsparq.app.annotations.ForeignKey;
 import com.healthsparq.app.model.xprod.Product;
 
 @Entity
@@ -18,6 +19,7 @@ public class ClientConfgr implements Serializable {
 	private Integer id;
 	
 	@ManyToOne(optional=false)
+	@ForeignKey(field="id")
 	private Client client;
 	
 	@ManyToOne(optional=false)
