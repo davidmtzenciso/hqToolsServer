@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -14,6 +15,7 @@ import javax.persistence.Table;
 import org.springframework.stereotype.Component;
 
 import com.healthsparq.app.annotations.ForeignKey;
+import com.healthsparq.app.annotations.Ignore;
 import com.healthsparq.app.exceptions.MetadataNotPresentException;
 import com.healthsparq.app.exceptions.NoValuePresentException;
 import com.healthsparq.app.exceptions.PrimitiveTypeNotSupportedException;
@@ -28,7 +30,7 @@ public class SQLTranslator {
 													NoSuchMethodException, PrimitiveTypeNotSupportedException, 
 													NoValuePresentException, RelationNotSupportedException {
 		var cls = obj.getClass();
-		var fields = Arrays.asList(cls.getDeclaredFields()).stream().sorted().collect(Collectors.toList());
+		var fields = Arrays.asList(cls.getDeclaredFields()).stream().sorted(Comparator.comparing(Field::getName)).collect(Collectors.toList());
 		
 		return 
 			new StringBuilder()
@@ -59,12 +61,14 @@ public class SQLTranslator {
 			return field.getAnnotation(Column.class).name();
 		}
 		else if(field.isAnnotationPresent(ManyToOne.class)) {
-			cls = field.getClass();
-			if(cls.isAnnotationPresent(ForeignKey.class)) {
-				return getColumnName(cls.getDeclaredField(cls.getAnnotation(ForeignKey.class).field()));
+			cls = field.getType();
+			if(field.isAnnotationPresent(ForeignKey.class)) {
+				return getColumnName(cls.getDeclaredField(field.getAnnotation(ForeignKey.class).field()));
 			} else {
-				throw new MetadataNotPresentException("Missing MainField annotation in class: " + cls.getSimpleName());
+				throw new MetadataNotPresentException("Missing Foreingkey annotation in field: " + field.getName());
 			}
+		} else if(!field.isAnnotationPresent(Ignore.class)){
+			return "";
 		} else {
 			throw new MetadataNotPresentException("Missing one of the following annotations: Column, OneToMany, ManyToOne. In field: " + field.getName()) ;
 		}
