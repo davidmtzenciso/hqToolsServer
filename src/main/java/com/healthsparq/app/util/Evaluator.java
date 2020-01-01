@@ -9,8 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
-import com.healthsparq.app.model.jira.Ticket;
-
 @Component
 public class Evaluator {
 	

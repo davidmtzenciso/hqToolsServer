@@ -1,21 +1,18 @@
 package com.healthsparq.app.util.unit.sqltranslator;
 
-import java.lang.reflect.InvocationTargetException;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.jboss.logging.Logger;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import com.healthsparq.app.exceptions.MetadataNotPresentException;
-import com.healthsparq.app.exceptions.NoValuePresentException;
 import com.healthsparq.app.exceptions.PrimitiveTypeNotSupportedException;
-import com.healthsparq.app.exceptions.RelationNotSupportedException;
-import com.healthsparq.app.model.xprod.client.ClientConfgr;
 import com.healthsparq.app.util.SQLTranslator;
 import com.healthsparq.app.util.unit.conf.TestConfig;
+import com.healthsparq.app.util.unit.sqltranslator.model.*;
 
 
 @SpringBootTest(classes= {TestConfig.class})
@@ -24,38 +21,46 @@ public class ToInsertTest {
 	@Autowired
 	private SQLTranslator sqlTranslator;
 	
-	@Autowired
-	private ClientConfgr clientConfgr;
-	
-	private static final String PARENTESIS_REGEX = "[\\W\\D\\s]+";
-	private static final String COLUMN_REGEX = "[A-Z]{4,10}(_[A-Z]{4,10})?";
-	private static final String SELECT_REGEX = "";
-	private static final String INSERT_REGEX = "INSERT INTO " + COLUMN_REGEX + PARENTESIS_REGEX + "(" + COLUMN_REGEX + ")+ "
-			+ "VALUES" + PARENTESIS_REGEX + "(" + COLUMN_REGEX + ")+ " + PARENTESIS_REGEX + ";";
-	
-	
 	private static final Logger LOG = Logger.getLogger(ToInsertTest.class);
 	
-	@BeforeEach
-	public void init() {
-		clientConfgr.setConfgrKey("property.key");
-		clientConfgr.setConfgrVal("property.value");
-		clientConfgr.setDefaultInd("N");
-		clientConfgr.setCustomExpression("");
-		clientConfgr.setPrecedence(2);
-		clientConfgr.getClient().setCode("EXC");
-		clientConfgr.getProduct().setId(52);
+	@Test
+	public void given_class_is_missing_table_annotation_when_translate_to_sql_then_it_should_fail() {
+		var obj = new ClassWithoutTableAnnotation();
+		var exception = assertThrows(MetadataNotPresentException.class, () -> {
+			sqlTranslator.toInsert(obj);
+		});
+		
+		assertEquals(SQLTranslator.MISSING_TABLE_ANNOTATION_ERROR + obj.getClass().getSimpleName(), exception.getMessage());
 	}
 	
 	@Test
-	public void given_object_class_is_valid_when_translate_to_sql_then_it_should_pass() throws NoSuchFieldException, SecurityException, 
-																							IllegalAccessException, IllegalArgumentException, 
-																							InvocationTargetException, NoSuchMethodException, 
-																							MetadataNotPresentException, PrimitiveTypeNotSupportedException, 
-																							NoValuePresentException, RelationNotSupportedException {
-		String sql = sqlTranslator.toInsert(clientConfgr);
-		LOG.info(sql);
-		Assertions.assertTrue(sql.matches(INSERT_REGEX));
+	public void given_class_has_field_with_invalid_type_when_translate_to_sql_then_it_should_fail() {
+		assertThrows(PrimitiveTypeNotSupportedException.class, () -> {
+			sqlTranslator.toInsert(new ClassWithInvalidFieldType());
+		});
 	}
 	
+	@Test
+	public void given_class_has_field_without_annotation_when_translate_to_sql_then_it_should_fail() throws NoSuchFieldException, SecurityException {
+		var obj = new ClassWithFieldWithoutAnnotation();
+		var exception = assertThrows(MetadataNotPresentException.class, () -> {
+			sqlTranslator.toInsert(obj);
+		});
+		
+		assertEquals(SQLTranslator.MISSING_FIELD_ANNOTATION_ERROR + 
+					 obj.getClass().getDeclaredField("field1").getName(), 
+					 exception.getMessage());
+	}
+
+	@Test
+	public void given_class_has_field_with_many_to_one_but_no_foreign_key_annotation_when_translate_to_sql_then_it_should_fail() throws NoSuchFieldException, SecurityException {
+		var obj = new ClassWithManyToOneButNoForeignKey();
+		var exception = assertThrows(MetadataNotPresentException.class, () -> {
+			sqlTranslator.toInsert(obj);
+		});
+		
+		assertEquals(SQLTranslator.MISSING_FOREIGN_KEY_ANNOTATION_ERROR + 
+					 obj.getClass().getDeclaredField("field1").getName(), 
+					 exception.getMessage());
+	}
 }

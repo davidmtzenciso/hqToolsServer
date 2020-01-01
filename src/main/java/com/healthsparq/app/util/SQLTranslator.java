@@ -2,12 +2,7 @@ package com.healthsparq.app.util;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.util.AbstractMap.SimpleEntry;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -20,13 +15,18 @@ import org.springframework.stereotype.Component;
 
 import com.healthsparq.app.annotations.ForeignKey;
 import com.healthsparq.app.annotations.Ignore;
-import com.healthsparq.app.exceptions.MetadataNotPresentException;
-import com.healthsparq.app.exceptions.NoValuePresentException;
-import com.healthsparq.app.exceptions.PrimitiveTypeNotSupportedException;
-import com.healthsparq.app.exceptions.RelationNotSupportedException;
+import com.healthsparq.app.exceptions.*;
 
 @Component
 public class SQLTranslator {
+	
+	public static final String MISSING_TABLE_ANNOTATION_ERROR = "Missing Table annotations in class: ";
+	public static final String MISSING_FOREIGN_KEY_ANNOTATION_ERROR = "Missing Foreingkey annotation in field: ";
+	public static final String MISSING_FIELD_ANNOTATION_ERROR = "Missing one of the following annotations: Column, Ignore, ManyToOne. In field: ";
+	public static final String MANY_TO_ONE_VALUE_ERROR = "No value present for ManyToOne relation in field: ";
+	public static final String NOT_SUPPORTED_RELATION_ERROR = "Relation OneToMany and OneToOne aren't supported yet!";	
+	public static final String NO_VALUE_ERROR = "No value present in class: "; 
+	public static final String NOT_SUPPORTED_TYPE_ERROR = "Type not supported: ";
 	
 	public String toInsert(Object obj) throws NoSuchFieldException, SecurityException, 
 													MetadataNotPresentException, IllegalAccessException, 
@@ -35,32 +35,33 @@ public class SQLTranslator {
 													NoValuePresentException, RelationNotSupportedException {
 		var cls = obj.getClass();
 		var fields = Arrays.asList(cls.getDeclaredFields()).stream().sorted(Comparator.comparing(Field::getName)).collect(Collectors.toList());
-		
-		return 
-			new StringBuilder()
+		Logger.getGlobal().info("fields: " + fields.size() + " in class: " + cls.getSimpleName());
+		if(cls.isAnnotationPresent(Table.class)) {
+		return new StringBuilder()
 				.append("INSERT INTO ").append(cls.getAnnotation(Table.class).name()).append(" (")
-				.append(getColumns(fields)).append(")\nVALUES( ").append(getValues(cls, fields, obj)).append(" );").toString();
+				.append(getColumns(fields)).append(")\nVALUES ( ").append(getValues(cls, fields, obj)).append(" );").toString();
+		} else {
+			throw new MetadataNotPresentException(MISSING_TABLE_ANNOTATION_ERROR + cls.getSimpleName());
+		}
 	}
 	
 	private String getColumns(List<Field> fields) throws NoSuchFieldException, SecurityException, MetadataNotPresentException {
 		var builder = new StringBuilder();
 		String columns;
-		
-		if(fields.size() == 1) {
-			return builder.append(getColumnName(fields.get(0))).toString();
-		} else {
-			for(int i=0; i < fields.size(); i++) {
-				if(!fields.get(i).isAnnotationPresent(Ignore.class)) {
-					builder.append(getColumnName(fields.get(i)));
+
+		for(Field field: fields) {
+			Logger.getGlobal().info("field name: " + field.getName() + ", field type: " + field.getType());
+			if(!field.isAnnotationPresent(Ignore.class)) {
+					builder.append(getColumnName(field));
 					builder.append(", ");
-				}
 			}
-			columns = builder.toString();
-			return columns.substring(0, columns.length()-2);
 		}
+		
+		columns = builder.toString();
+		return columns.substring(0, columns.length()-2);
 	}
 	
-	private String getColumnName(Field field) throws NoSuchFieldException, SecurityException, MetadataNotPresentException {
+	private String getColumnName(final Field field) throws NoSuchFieldException, SecurityException, MetadataNotPresentException {
 		Class<?> cls;
 
 		if(field.isAnnotationPresent(Column.class)) {
@@ -71,10 +72,10 @@ public class SQLTranslator {
 			if(field.isAnnotationPresent(ForeignKey.class)) {
 				return getColumnName(cls.getDeclaredField(field.getAnnotation(ForeignKey.class).field()));
 			} else {
-				throw new MetadataNotPresentException("Missing Foreingkey annotation in field: " + field.getName());
+				throw new MetadataNotPresentException(MISSING_FOREIGN_KEY_ANNOTATION_ERROR + field.getName());
 			}
 		} else {
-			throw new MetadataNotPresentException("Missing one of the following annotations: Column, OneToMany, ManyToOne. In field: " + field.getName()) ;
+			throw new MetadataNotPresentException(MISSING_FIELD_ANNOTATION_ERROR + field.getName()) ;
 		}
 	}
 	
@@ -102,13 +103,13 @@ public class SQLTranslator {
 							builder.append(getValueFromRelation(field.getType(), 
 										relationValue, field.getAnnotation(ForeignKey.class).field()));
 						} else {
-							throw new NoValuePresentException("No value present for ManyToOne relation in field: " + field.getName());
+							throw new NoValuePresentException(MANY_TO_ONE_VALUE_ERROR + field.getName());
 						}
 					} else {
-						throw new MetadataNotPresentException("ForeignKey annotation in not present in field: " + field.getName());
+						throw new MetadataNotPresentException(MISSING_FOREIGN_KEY_ANNOTATION_ERROR + field.getName());
 					}
 				} else {
-					throw new RelationNotSupportedException("Relation OneToMany and OneToOne aren't supported yet!");
+					throw new RelationNotSupportedException(NOT_SUPPORTED_RELATION_ERROR);
 				}
 				builder.append(", ");
 			}
@@ -139,10 +140,10 @@ public class SQLTranslator {
 				return builder.append("( SELECT ").append(foreignField.getAnnotation(Column.class).name())
 							  .append(" FROM ").append(table).append(getQueryConditionals(fields)).append(" )").toString();
 			} else {
-				throw new MetadataNotPresentException("Field reference by ForeingKey annotation missing Column or relationship annotation");
+				throw new MetadataNotPresentException(MISSING_FIELD_ANNOTATION_ERROR + cls.getSimpleName());
 			}
 		} else {
-			throw new MetadataNotPresentException("Missing Table annotations in cls: " + cls.getSimpleName());
+			throw new MetadataNotPresentException(MISSING_TABLE_ANNOTATION_ERROR + cls.getSimpleName());
 		}
 	}
 		
@@ -175,7 +176,7 @@ public class SQLTranslator {
 		}
 		
 		if (fields.isEmpty()) {
-			throw new NoValuePresentException("No value present in class: " + cls.getSimpleName());
+			throw new NoValuePresentException(NO_VALUE_ERROR + cls.getSimpleName());
 		} else {
 			return fields;
 		}
@@ -185,14 +186,12 @@ public class SQLTranslator {
 		var builder = new StringBuilder();
 		var value = cls.getMethod(getMethodName(field.getName())).invoke(target);
 		
-		if(value == null) {
-			return null;
-		} else if(field.getType().getSimpleName().equals(String.class.getSimpleName())) {
+		if(field.getType().getSimpleName().equals(String.class.getSimpleName())) {
 			builder.append("'").append(value).append("'");
 		} else if(field.getType().getSimpleName().equals(Integer.class.getSimpleName())) {
 			builder.append(value);
 		} else {
-			throw new PrimitiveTypeNotSupportedException("Type not supported: " + field.getType().getSimpleName());
+			throw new PrimitiveTypeNotSupportedException(NOT_SUPPORTED_TYPE_ERROR+ field.getType().getSimpleName());
 		}
 		return builder.toString();
 	}
