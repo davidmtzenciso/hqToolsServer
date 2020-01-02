@@ -7,7 +7,7 @@ import javax.persistence.Table;
 import com.healthsparq.app.annotations.Ignore;
 
 @Table(name="TABLE_NAME")
-public class UnsupportedRelation {
+public class HasUnsupportedRelation {
 
 	@Column(name="COLUMN_1")
 	private String field1;

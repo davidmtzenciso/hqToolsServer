@@ -26,7 +26,7 @@ public class ToInsertTest {
 	
 	@Test
 	public void given_class_is_missing_table_annotation_when_translate_to_sql_then_it_should_fail() {
-		var obj = new WithoutTableAnnotation();
+		var obj = new HasNotTableAnnotation();
 		var exception = assertThrows(MetadataNotPresentException.class, () -> {
 			sqlTranslator.toInsert(obj);
 		});
@@ -37,13 +37,13 @@ public class ToInsertTest {
 	@Test
 	public void given_class_has_field_with_invalid_type_when_translate_to_sql_then_it_should_fail() {
 		assertThrows(PrimitiveTypeNotSupportedException.class, () -> {
-			sqlTranslator.toInsert(new InvalidFieldType());
+			sqlTranslator.toInsert(new HasInvalidFieldType());
 		});
 	}
 	
 	@Test
 	public void given_class_has_field_without_annotation_when_translate_to_sql_then_it_should_fail() throws NoSuchFieldException, SecurityException {
-		var obj = new FieldWithoutAnnotation();
+		var obj = new HasFieldWithoutAnnotation();
 		var exception = assertThrows(MetadataNotPresentException.class, () -> {
 			sqlTranslator.toInsert(obj);
 		});
@@ -55,7 +55,7 @@ public class ToInsertTest {
 
 	@Test
 	public void given_class_has_field_with_many_to_one_but_no_foreign_key_annotation_when_translate_to_sql_then_it_should_fail() throws NoSuchFieldException, SecurityException {
-		var obj = new ManyToOneNoForeignKey();
+		var obj = new HasManyToOneNoForeignKey();
 		var exception = assertThrows(MetadataNotPresentException.class, () -> {
 			sqlTranslator.toInsert(obj);
 		});
@@ -67,12 +67,22 @@ public class ToInsertTest {
 	
 	@Test
 	public void given_class_has_field_with_unsupported_relation_when_translate_to_sql_then_it_should_fail() {
-		var obj = new UnsupportedRelation();
+		var obj = new HasUnsupportedRelation();
 		var exception = assertThrows(RelationNotSupportedException.class, () -> {
 			sqlTranslator.toInsert(obj);
 		});
 		
 		assertEquals(SQLTranslator.NOT_SUPPORTED_RELATION_ERROR, exception.getMessage());
+	}
+	
+	@Test
+	public void given_field_class_has_not__table_annotation_when_translate_to_sql_then_it_should_fail() {
+		var obj = new FieldClassHasNotTableAnnotation();
+		var exception = assertThrows(MetadataNotPresentException.class, () -> {
+			sqlTranslator.toInsert(obj);
+		});
+		
+		assertEquals(SQLTranslator.MISSING_TABLE_ANNOTATION_ERROR + obj.getField3().getClass().getSimpleName(), exception.getMessage());
 	}
 	
 	

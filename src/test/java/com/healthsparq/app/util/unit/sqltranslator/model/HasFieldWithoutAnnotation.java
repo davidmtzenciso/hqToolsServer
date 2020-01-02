@@ -4,7 +4,7 @@ import javax.persistence.Table;
 
 @Table(name="TABLE_NAME")
 
-public class FieldWithoutAnnotation {
+public class HasFieldWithoutAnnotation {
 
 	private Integer field1;
 
