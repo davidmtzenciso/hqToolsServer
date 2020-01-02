@@ -26,7 +26,7 @@ public class ToInsertTest {
 	
 	@Test
 	public void given_class_is_missing_table_annotation_when_translate_to_sql_then_it_should_fail() {
-		var obj = new HasNotTableAnnotation();
+		var obj = new HasNoTableAnnotation();
 		var exception = assertThrows(MetadataNotPresentException.class, () -> {
 			sqlTranslator.toInsert(obj);
 		});
@@ -54,18 +54,6 @@ public class ToInsertTest {
 	}
 
 	@Test
-	public void given_class_has_field_with_many_to_one_but_no_foreign_key_annotation_when_translate_to_sql_then_it_should_fail() throws NoSuchFieldException, SecurityException {
-		var obj = new HasManyToOneNoForeignKey();
-		var exception = assertThrows(MetadataNotPresentException.class, () -> {
-			sqlTranslator.toInsert(obj);
-		});
-		
-		assertEquals(SQLTranslator.MISSING_FOREIGN_KEY_ANNOTATION_ERROR + 
-					 obj.getClass().getDeclaredField("field1").getName(), 
-					 exception.getMessage());
-	}
-	
-	@Test
 	public void given_class_has_field_with_unsupported_relation_when_translate_to_sql_then_it_should_fail() {
 		var obj = new HasUnsupportedRelation();
 		var exception = assertThrows(RelationNotSupportedException.class, () -> {
@@ -76,13 +64,24 @@ public class ToInsertTest {
 	}
 	
 	@Test
-	public void given_field_class_has_not__table_annotation_when_translate_to_sql_then_it_should_fail() {
-		var obj = new FieldClassHasNotTableAnnotation();
+	public void given_field_class_has_not_table_annotation_when_translate_to_sql_then_it_should_fail() {
+		var obj = new FieldClassHasNoTableAnnotation();
 		var exception = assertThrows(MetadataNotPresentException.class, () -> {
 			sqlTranslator.toInsert(obj);
 		});
 		
 		assertEquals(SQLTranslator.MISSING_TABLE_ANNOTATION_ERROR + obj.getField3().getClass().getSimpleName(), exception.getMessage());
+	}
+	
+	@Test
+	public void given_field_class_has_field_without_annotation_when_translate_to_sql_then_it_should_fail() throws NoSuchFieldException, SecurityException {
+		var obj = new FieldClassHasFieldWithoutAnnotation();
+		var exception = assertThrows(MetadataNotPresentException.class, () -> {
+			sqlTranslator.toInsert(obj);
+		});
+		
+		assertEquals(SQLTranslator.MISSING_FIELD_ANNOTATION_ERROR + 
+						obj.getField1().getClass().getDeclaredField("field1").getName(), exception.getMessage());
 	}
 	
 	

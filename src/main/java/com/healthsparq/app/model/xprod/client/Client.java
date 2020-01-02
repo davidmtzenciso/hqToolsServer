@@ -2,12 +2,7 @@ package com.healthsparq.app.model.xprod.client;
 
 import java.io.Serializable;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
-
-import com.healthsparq.app.annotations.Ignore;
+import javax.persistence.*;
 
 @Entity
 @Table(name="CLIENT")
@@ -23,7 +18,6 @@ public class Client implements Serializable {
 	@Column(name="CLIENT_NAME",length=60, nullable=true)
 	private String name;
 	
-	@Ignore
 	private static final long serialVersionUID = 1L;
 
 	public Integer getId() {

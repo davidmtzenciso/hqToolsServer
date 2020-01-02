@@ -8,8 +8,6 @@ import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
-import com.healthsparq.app.annotations.ForeignKey;
-import com.healthsparq.app.annotations.Ignore;
 import com.healthsparq.app.model.xprod.Product;
 
 @Entity
@@ -17,15 +15,12 @@ import com.healthsparq.app.model.xprod.Product;
 public class ClientConfgr implements Serializable {
 
 	@Id
-	@Ignore
 	private Integer id;
 	
 	@ManyToOne(optional=false)
-	@ForeignKey(field="id")
 	private Client client;
 	
 	@ManyToOne(optional=false)
-	@ForeignKey(field="id")
 	private Product product;
 	
 	@Column(name="CONFGR_KEY", nullable=false)
@@ -43,7 +38,6 @@ public class ClientConfgr implements Serializable {
 	@Column(name="PRECEDENCE", nullable=true)
 	private Integer precedence;
 	
-	@Ignore
 	private static final long serialVersionUID = 1L;
 	
 	public Integer getId() {

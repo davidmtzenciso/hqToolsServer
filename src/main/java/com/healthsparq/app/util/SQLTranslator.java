@@ -2,6 +2,7 @@ package com.healthsparq.app.util;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
@@ -10,15 +11,12 @@ import javax.persistence.*;
 
 import org.springframework.stereotype.Component;
 
-import com.healthsparq.app.annotations.ForeignKey;
-import com.healthsparq.app.annotations.Ignore;
 import com.healthsparq.app.exceptions.*;
 
 @Component
 public class SQLTranslator {
 	
 	public static final String MISSING_TABLE_ANNOTATION_ERROR = "Missing Table annotations in class: ";
-	public static final String MISSING_FOREIGN_KEY_ANNOTATION_ERROR = "Missing Foreingkey annotation in field: ";
 	public static final String MISSING_FIELD_ANNOTATION_ERROR = "Missing one of the following annotations: Column, Ignore, ManyToOne. In field: ";
 	public static final String MANY_TO_ONE_VALUE_ERROR = "No value present for ManyToOne relation in field: ";
 	public static final String NOT_SUPPORTED_RELATION_ERROR = "Relation OneToMany and OneToOne aren't supported yet!";	
@@ -66,18 +64,7 @@ public class SQLTranslator {
 		
 		if(field.isAnnotationPresent(OneToMany.class) || field.isAnnotationPresent(OneToOne.class)) {
 			throw new RelationNotSupportedException(NOT_SUPPORTED_RELATION_ERROR);
-		} 
-		else if(field.isAnnotationPresent(ManyToOne.class)) {
-			if(field.isAnnotationPresent(ForeignKey.class)) {
-				if(field.getAnnotation(ForeignKey.class).field().isEmpty()) {
-					throw new NoValuePresentException(NO_VALUE_IN_FIELD_ANNOTATION_ERROR + field.getName());
-				} else {
-					annotation = field.getAnnotation(ManyToOne.class);
-				}
-			} else {
-				throw new MetadataNotPresentException(MISSING_FOREIGN_KEY_ANNOTATION_ERROR + field.getName());
-			}
-		} else if(!field.isAnnotationPresent(Ignore.class) && !field.isAnnotationPresent(Column.class)) {
+		} else if(!field.isAnnotationPresent(ManyToOne.class) && !field.isAnnotationPresent(Column.class)) {
 			throw new MetadataNotPresentException(MISSING_FIELD_ANNOTATION_ERROR + field.getName());
 		} else if(field.isAnnotationPresent(Column.class)) {
 			if(field.getAnnotation(Column.class).name().isEmpty()) {
@@ -98,8 +85,8 @@ public class SQLTranslator {
 		String columns;
 
 		for(Field field: fields) {
-			annotation = getAnnotation(field);
-			if(annotation instanceof Ignore) {
+			if(!Modifier.isStatic(field.getModifiers())) {
+				annotation = getAnnotation(field);
 				builder.append(getColumnName(field, annotation));
 				builder.append(", ");
 			}
@@ -113,16 +100,25 @@ public class SQLTranslator {
 																					MetadataNotPresentException, 
 																					RelationNotSupportedException, 
 																					NoValuePresentException {
-		Annotation foreignAnnotation;
-		Field foreignField;
+		Field innerField;
 		
 		if(annotation instanceof Column) {
 			return ((Column) annotation).name();
+		} else if(annotation instanceof ManyToOne) {
+			innerField = findIdField(field.getType());
+			return getColumnName(innerField, getAnnotation(innerField));
 		} else {
-			foreignField = field.getType().getDeclaredField(field.getAnnotation(ForeignKey.class).field());
-			foreignAnnotation = getAnnotation(foreignField);
-			return getColumnName(foreignField, foreignAnnotation);
+			return null;
 		}
+	}
+	
+	private Field findIdField(Class<?> cls) {
+		for(Field field : cls.getDeclaredFields()) {
+			if (field.isAnnotationPresent(Id.class)) {
+				return field;
+			}
+		}
+		return null;
 	}
 	
 	private String getMethodName(String fieldName) {
@@ -140,7 +136,7 @@ public class SQLTranslator {
 		
 		for(Field field : fields) {
 			annotation = getAnnotation(field);
-			if(!(annotation instanceof Ignore)) {
+			if(!Modifier.isStatic(field.getModifiers())) {
 				builder.append(getValue(annotation, cls, field, target)).append(", ");
 			}
 		}
@@ -151,45 +147,46 @@ public class SQLTranslator {
 	private Object getValue(Annotation annotation, Class<?> cls, Field field, Object target) throws 
 																						NoValuePresentException, MetadataNotPresentException, 
 																						PrimitiveTypeNotSupportedException, RelationNotSupportedException,
-																						ReflectiveOperationException {
-		Table table;
-		Object value;
-		
+																						ReflectiveOperationException {		
 		if(annotation instanceof Column) {
 			return getValueFromColumn(field, target, cls);
 		} else if(annotation instanceof ManyToOne) {
-		 	table = getAnnotation(field.getType());
-			value = cls.getMethod(getMethodName(field.getName())).invoke(target);
-			if(value != null) {
-				return getValueFromRelation(field.getType(), value, table, 
-								field.getAnnotation(ForeignKey.class).field());
-			}
+			return toSelect( cls.getMethod(getMethodName(field.getName())).invoke(target) );
 		}
 		
 		return null;
 	}
 	
-	private Object getValueFromRelation(Class<?> cls, Object target, Table table, String fieldName) throws 
+	public String toSelect(Object obj) throws NoValuePresentException, MetadataNotPresentException, 
+										PrimitiveTypeNotSupportedException, RelationNotSupportedException, 
+										ReflectiveOperationException {
+		Class<?> cls = obj.getClass();
+		Table table = getAnnotation(cls);
+		Field id = findIdField(cls);
+		return toSelect(cls, obj, table, id);
+		
+	}
+	
+	private String toSelect(Class<?> cls, Object target, Table table, Field id) throws 
 																				NoValuePresentException, MetadataNotPresentException, 
 																				PrimitiveTypeNotSupportedException, RelationNotSupportedException,
 																				ReflectiveOperationException {
 		var fields  = findFieldsWithValue(cls, target);
 		var builder = new StringBuilder();
 		Annotation annotation;
-		Field field;
 		
-		field = cls.getDeclaredField(fieldName);
-		annotation = getAnnotation(field);
+		annotation = getAnnotation(id);
 		if(annotation instanceof Column) {
 			return builder.append("( SELECT ").append(((Column)annotation).name())
 						  .append(" FROM ").append(table).append(getQueryConditionals(fields))
 						  .append(" )").toString();
-		} else {
-			return getValueFromRelation(field.getType(), null, getAnnotation(field.getType()), null);
+		} else if(annotation instanceof ManyToOne) {
+			return null;
 		}
-	}
 		
-
+		return null;
+	}
+	
 	private String getQueryConditionals(Map<Field, Object> args) {
 		var builder = new StringBuilder();
 		int i = 0;
@@ -211,7 +208,7 @@ public class SQLTranslator {
 		Map<Field, Object> fields = new HashMap<>();
 		
 		for (Field field :  cls.getDeclaredFields()) {
-			if (!field.isAnnotationPresent(Ignore.class)) {
+			if (!Modifier.isStatic(field.getModifiers())) {
 				value = this.getValueFromColumn(field, target, cls);
 				if (value != null) {
 					fields.put(field, value);
