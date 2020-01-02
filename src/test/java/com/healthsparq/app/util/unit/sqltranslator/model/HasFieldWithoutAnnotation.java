@@ -3,7 +3,6 @@ package com.healthsparq.app.util.unit.sqltranslator.model;
 import javax.persistence.Table;
 
 @Table(name="TABLE_NAME")
-
 public class HasFieldWithoutAnnotation {
 
 	private Integer field1;
