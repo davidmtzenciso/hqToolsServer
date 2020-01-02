@@ -9,7 +9,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 @Entity
-@Table(name="CLIENT_TIER_CONFGR", catalog="xproduct")
+@Table(name="CLIENT_TIER_CONFGR")
 public class ClientTierConfgr implements Serializable {
 
 	@Id

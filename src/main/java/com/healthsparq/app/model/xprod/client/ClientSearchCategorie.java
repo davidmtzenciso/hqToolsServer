@@ -8,7 +8,7 @@ import javax.persistence.Id;
 import javax.persistence.Table;
 
 @Entity
-@Table(name="CLIENT_SEARCH_CATEGORY", catalog="xproduct")
+@Table(name="CLIENT_SEARCH_CATEGORY")
 public class ClientSearchCategorie implements Serializable {
 
 	@Id

@@ -17,7 +17,6 @@ public class Evaluator {
 	private List<String> schemas;
 	
 	private static final String DATE_FORMAT = "yyyy/MM/dd";
-	private static final String DATE_REGEX = "[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}";
 	
 	public Boolean isExistingSchema(String name) {
 		return schemas.contains(name.toLowerCase());
@@ -25,13 +24,10 @@ public class Evaluator {
 	
 	public Boolean isValidReleaseDate(String text) {
 		try {
-			if(text.matches(DATE_REGEX)) {
 				var dateFormat = new SimpleDateFormat(DATE_FORMAT);
 				var date = dateFormat.parse(text);
 				return date != null;
-			} else {
-				return false;
-			}
+			
 		} catch (ParseException e) {
 			e.printStackTrace();
 			return false;

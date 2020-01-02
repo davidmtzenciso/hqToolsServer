@@ -2,13 +2,10 @@ package com.healthsparq.app.model.xprod.client;
 
 import java.io.Serializable;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 
 @Entity
-@Table(name="CLIENT", catalog="xproduct")
+@Table(name="CLIENT")
 public class Client implements Serializable {
 
 	@Id
@@ -22,4 +19,28 @@ public class Client implements Serializable {
 	private String name;
 	
 	private static final long serialVersionUID = 1L;
+
+	public Integer getId() {
+		return id;
+	}
+
+	public void setId(Integer id) {
+		this.id = id;
+	}
+
+	public String getCode() {
+		return code;
+	}
+
+	public void setCode(String code) {
+		this.code = code;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
 }

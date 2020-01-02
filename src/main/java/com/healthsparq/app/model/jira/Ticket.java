@@ -1,17 +1,41 @@
 package com.healthsparq.app.model.jira;
 
+import java.io.Serializable;
+
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Positive;
+
 import org.springframework.stereotype.Component;
 
 @Component
-public class Ticket {
+public class Ticket implements Serializable {
 
+	@NotEmpty
 	private String title;
+	
+	@NotEmpty
 	private String type;
+	
+	@Positive
 	private int number;
+	@NotNull
+	
+	@NotEmpty
+	@Pattern(regexp = "[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}")
 	private String label;
+	
+	@NotEmpty
 	private String customer;
+	
+	@NotEmpty
 	private String author;
+	
+	@Positive
 	private int version;
+	
+	private static final long serialVersionUID = 1L;
 	
 	public String getTitle() {
 		return title;
