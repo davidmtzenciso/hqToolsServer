@@ -4,7 +4,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 @Table(name="TABLE_NAME")
-public class ClassWithManyToOneButNoForeignKey {
+public class ManyToOneNoForeignKey {
 
 	@ManyToOne(optional=false)
 	private ValidClass field1;

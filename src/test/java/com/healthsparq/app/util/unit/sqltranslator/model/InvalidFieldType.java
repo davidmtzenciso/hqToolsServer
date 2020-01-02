@@ -4,7 +4,7 @@ import javax.persistence.Column;
 import javax.persistence.Table;
 
 @Table(name="TABLE_NAME")
-public class ClassWithInvalidFieldType {
+public class InvalidFieldType {
 	
 	@Column(name="COLUMN_1")
 	private Double field1;

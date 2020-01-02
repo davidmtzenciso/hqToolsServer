@@ -10,6 +10,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import com.healthsparq.app.exceptions.MetadataNotPresentException;
 import com.healthsparq.app.exceptions.PrimitiveTypeNotSupportedException;
+import com.healthsparq.app.exceptions.RelationNotSupportedException;
 import com.healthsparq.app.util.SQLTranslator;
 import com.healthsparq.app.util.unit.conf.TestConfig;
 import com.healthsparq.app.util.unit.sqltranslator.model.*;
@@ -25,7 +26,7 @@ public class ToInsertTest {
 	
 	@Test
 	public void given_class_is_missing_table_annotation_when_translate_to_sql_then_it_should_fail() {
-		var obj = new ClassWithoutTableAnnotation();
+		var obj = new WithoutTableAnnotation();
 		var exception = assertThrows(MetadataNotPresentException.class, () -> {
 			sqlTranslator.toInsert(obj);
 		});
@@ -36,13 +37,13 @@ public class ToInsertTest {
 	@Test
 	public void given_class_has_field_with_invalid_type_when_translate_to_sql_then_it_should_fail() {
 		assertThrows(PrimitiveTypeNotSupportedException.class, () -> {
-			sqlTranslator.toInsert(new ClassWithInvalidFieldType());
+			sqlTranslator.toInsert(new InvalidFieldType());
 		});
 	}
 	
 	@Test
 	public void given_class_has_field_without_annotation_when_translate_to_sql_then_it_should_fail() throws NoSuchFieldException, SecurityException {
-		var obj = new ClassWithFieldWithoutAnnotation();
+		var obj = new FieldWithoutAnnotation();
 		var exception = assertThrows(MetadataNotPresentException.class, () -> {
 			sqlTranslator.toInsert(obj);
 		});
@@ -54,7 +55,7 @@ public class ToInsertTest {
 
 	@Test
 	public void given_class_has_field_with_many_to_one_but_no_foreign_key_annotation_when_translate_to_sql_then_it_should_fail() throws NoSuchFieldException, SecurityException {
-		var obj = new ClassWithManyToOneButNoForeignKey();
+		var obj = new ManyToOneNoForeignKey();
 		var exception = assertThrows(MetadataNotPresentException.class, () -> {
 			sqlTranslator.toInsert(obj);
 		});
@@ -63,4 +64,17 @@ public class ToInsertTest {
 					 obj.getClass().getDeclaredField("field1").getName(), 
 					 exception.getMessage());
 	}
+	
+	@Test
+	public void given_class_has_field_with_unsupported_relation_when_translate_to_sql_then_it_should_fail() {
+		var obj = new UnsupportedRelation();
+		var exception = assertThrows(RelationNotSupportedException.class, () -> {
+			sqlTranslator.toInsert(obj);
+		});
+		
+		assertEquals(SQLTranslator.NOT_SUPPORTED_RELATION_ERROR, exception.getMessage());
+	}
+	
+	
+	
 }

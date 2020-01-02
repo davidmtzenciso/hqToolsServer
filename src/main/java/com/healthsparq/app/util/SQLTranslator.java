@@ -4,12 +4,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import javax.persistence.Column;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
+import javax.persistence.*;
 
 import org.springframework.stereotype.Component;
 
@@ -33,27 +30,47 @@ public class SQLTranslator {
 													IllegalArgumentException, InvocationTargetException, 
 													NoSuchMethodException, PrimitiveTypeNotSupportedException, 
 													NoValuePresentException, RelationNotSupportedException {
+		List<Field> fields;
 		var cls = obj.getClass();
-		var fields = Arrays.asList(cls.getDeclaredFields()).stream().sorted(Comparator.comparing(Field::getName)).collect(Collectors.toList());
-		Logger.getGlobal().info("fields: " + fields.size() + " in class: " + cls.getSimpleName());
+		
 		if(cls.isAnnotationPresent(Table.class)) {
-		return new StringBuilder()
-				.append("INSERT INTO ").append(cls.getAnnotation(Table.class).name()).append(" (")
-				.append(getColumns(fields)).append(")\nVALUES ( ").append(getValues(cls, fields, obj)).append(" );").toString();
+			fields = Arrays.asList(cls.getDeclaredFields())
+						   .stream().sorted(Comparator.comparing(Field::getName))
+						   .collect(Collectors.toList());
+			return new StringBuilder()
+						.append("INSERT INTO ").append(cls.getAnnotation(Table.class).name())
+						.append(" (").append(getColumns(fields)).append(")\nVALUES ( ")
+						.append(getValues(cls, fields, obj)).append(" );").toString();
 		} else {
 			throw new MetadataNotPresentException(MISSING_TABLE_ANNOTATION_ERROR + cls.getSimpleName());
 		}
 	}
 	
-	private String getColumns(List<Field> fields) throws NoSuchFieldException, SecurityException, MetadataNotPresentException {
+	private boolean isValidField(final Field field) throws RelationNotSupportedException, MetadataNotPresentException {
+		if(field.isAnnotationPresent(OneToMany.class) || field.isAnnotationPresent(OneToOne.class)) {
+			throw new RelationNotSupportedException(NOT_SUPPORTED_RELATION_ERROR);
+		} 
+		else if(field.isAnnotationPresent(ManyToOne.class)) {
+			if(!field.isAnnotationPresent(ForeignKey.class)) {
+				throw new MetadataNotPresentException(MISSING_FOREIGN_KEY_ANNOTATION_ERROR + field.getName());
+			}
+		} else if(!field.isAnnotationPresent(Ignore.class) && !field.isAnnotationPresent(Column.class)) {
+			throw new MetadataNotPresentException(MISSING_FIELD_ANNOTATION_ERROR + field.getName());
+		}
+		return true;
+	}
+	
+	private String getColumns(List<Field> fields) throws NoSuchFieldException, SecurityException, 
+													MetadataNotPresentException, RelationNotSupportedException {
 		var builder = new StringBuilder();
 		String columns;
 
 		for(Field field: fields) {
-			Logger.getGlobal().info("field name: " + field.getName() + ", field type: " + field.getType());
-			if(!field.isAnnotationPresent(Ignore.class)) {
-					builder.append(getColumnName(field));
-					builder.append(", ");
+			if(isValidField(field)) {
+				if(!field.isAnnotationPresent(Ignore.class)) {
+						builder.append(getColumnName(field));
+						builder.append(", ");
+				}
 			}
 		}
 		
@@ -61,21 +78,13 @@ public class SQLTranslator {
 		return columns.substring(0, columns.length()-2);
 	}
 	
-	private String getColumnName(final Field field) throws NoSuchFieldException, SecurityException, MetadataNotPresentException {
-		Class<?> cls;
-
+	private String getColumnName(final Field field) throws NoSuchFieldException, SecurityException, 
+														MetadataNotPresentException, RelationNotSupportedException {
 		if(field.isAnnotationPresent(Column.class)) {
 			return field.getAnnotation(Column.class).name();
 		}
-		else if(field.isAnnotationPresent(ManyToOne.class)) {
-			cls = field.getType();
-			if(field.isAnnotationPresent(ForeignKey.class)) {
-				return getColumnName(cls.getDeclaredField(field.getAnnotation(ForeignKey.class).field()));
-			} else {
-				throw new MetadataNotPresentException(MISSING_FOREIGN_KEY_ANNOTATION_ERROR + field.getName());
-			}
-		} else {
-			throw new MetadataNotPresentException(MISSING_FIELD_ANNOTATION_ERROR + field.getName()) ;
+		else {
+			return getColumnName(field.getType().getDeclaredField(field.getAnnotation(ForeignKey.class).field()));
 		}
 	}
 	
@@ -93,35 +102,34 @@ public class SQLTranslator {
 		String values;
 		
 		for(Field field : fields) {
-			if(!field.isAnnotationPresent(Ignore.class)) {
-				 if(field.isAnnotationPresent(Column.class)) {
-					builder.append(getValueFromColumn(field, target, cls));
-				} else if(field.isAnnotationPresent(ManyToOne.class)) {
-					if(field.isAnnotationPresent(ForeignKey.class)) {
-						relationValue = cls.getMethod(getMethodName(field.getName())).invoke(target);
-						if(relationValue != null) {
-							builder.append(getValueFromRelation(field.getType(), 
-										relationValue, field.getAnnotation(ForeignKey.class).field()));
-						} else {
-							throw new NoValuePresentException(MANY_TO_ONE_VALUE_ERROR + field.getName());
-						}
-					} else {
-						throw new MetadataNotPresentException(MISSING_FOREIGN_KEY_ANNOTATION_ERROR + field.getName());
+			if(isValidField(field)) {
+				if(!field.isAnnotationPresent(Ignore.class)) {
+					 if(field.isAnnotationPresent(Column.class)) {
+						builder.append(getValueFromColumn(field, target, cls));
+					 } 
+					 else if(field.isAnnotationPresent(ManyToOne.class)) {
+							relationValue = cls.getMethod(getMethodName(field.getName())).invoke(target);
+							if(relationValue != null) {
+								builder.append(getValueFromRelation(field.getType(), 
+											relationValue, field.getAnnotation(ForeignKey.class).field()));
+							} else {
+								throw new NoValuePresentException(MANY_TO_ONE_VALUE_ERROR + field.getName());
+							}
 					}
-				} else {
-					throw new RelationNotSupportedException(NOT_SUPPORTED_RELATION_ERROR);
+					builder.append(", ");
 				}
-				builder.append(", ");
 			}
 		}
 		values = builder.toString();
 		return values.substring(0, values.length() - 2);
 	}
 	
-	private Object getValueFromRelation(Class<?> cls, Object target, String foreingFieldName) throws NoSuchFieldException, SecurityException, 
-																		IllegalAccessException, IllegalArgumentException, 
-																		InvocationTargetException, NoSuchMethodException, 
-																		NoValuePresentException, MetadataNotPresentException, PrimitiveTypeNotSupportedException {
+	private Object getValueFromRelation(Class<?> cls, Object target, String foreingFieldName) 
+																				throws NoSuchFieldException, SecurityException, 
+																				IllegalAccessException, IllegalArgumentException, 
+																				InvocationTargetException, NoSuchMethodException, 
+																				NoValuePresentException, MetadataNotPresentException, 
+																				PrimitiveTypeNotSupportedException {
 		var foreignField = cls.getDeclaredField(foreingFieldName);
 		var fields  = findFieldsWithValue(cls, target);
 		var builder = new StringBuilder();
@@ -162,7 +170,8 @@ public class SQLTranslator {
 	
 	private Map<Field, Object> findFieldsWithValue(Class<?> cls, final Object target) throws IllegalAccessException, IllegalArgumentException, 
 																					InvocationTargetException, NoSuchMethodException, 
-																					SecurityException, NoValuePresentException, PrimitiveTypeNotSupportedException {
+																					SecurityException, NoValuePresentException, 
+																					PrimitiveTypeNotSupportedException {
 		Object value;
 		Map<Field, Object> fields = new HashMap<>();
 		
@@ -182,7 +191,10 @@ public class SQLTranslator {
 		}
 	}
 	
-	private String getValueFromColumn(Field field, Object target, Class<?> cls) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, PrimitiveTypeNotSupportedException {
+	private String getValueFromColumn(Field field, Object target, Class<?> cls) 
+																		throws IllegalAccessException, IllegalArgumentException,
+																		InvocationTargetException, NoSuchMethodException, 
+																		SecurityException, PrimitiveTypeNotSupportedException {
 		var builder = new StringBuilder();
 		var value = cls.getMethod(getMethodName(field.getName())).invoke(target);
 		
