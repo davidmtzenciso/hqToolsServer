@@ -11,7 +11,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import com.healthsparq.app.exceptions.MetadataNotPresentException;
 import com.healthsparq.app.exceptions.PrimitiveTypeNotSupportedException;
 import com.healthsparq.app.exceptions.RelationNotSupportedException;
-import com.healthsparq.app.util.SQLTranslator;
+import com.healthsparq.app.util.sqltranslator.SQLTranslatorImpl;
+import com.healthsparq.app.util.sqltranslator.TranslationErrors;
 import com.healthsparq.app.util.unit.conf.TestConfig;
 import com.healthsparq.app.util.unit.sqltranslator.model.*;
 
@@ -20,7 +21,7 @@ import com.healthsparq.app.util.unit.sqltranslator.model.*;
 public class ToInsertTest {
 
 	@Autowired
-	private SQLTranslator sqlTranslator;
+	private SQLTranslatorImpl sqlTranslator;
 	
 	private static final Logger LOG = Logger.getLogger(ToInsertTest.class);
 	
@@ -31,7 +32,7 @@ public class ToInsertTest {
 			sqlTranslator.toInsert(obj);
 		});
 		
-		assertEquals(SQLTranslator.MISSING_TABLE_ANNOTATION_ERROR + obj.getClass().getSimpleName(), exception.getMessage());
+		assertEquals(TranslationErrors.MISSING_TABLE_ANNOTATION_ERROR + obj.getClass().getSimpleName(), exception.getMessage());
 	}
 	
 	@Test
@@ -48,7 +49,7 @@ public class ToInsertTest {
 			sqlTranslator.toInsert(obj);
 		});
 		
-		assertEquals(SQLTranslator.MISSING_FIELD_ANNOTATION_ERROR + 
+		assertEquals(TranslationErrors.MISSING_FIELD_ANNOTATION_ERROR + 
 					 obj.getClass().getDeclaredField("field1").getName(), 
 					 exception.getMessage());
 	}
@@ -60,7 +61,7 @@ public class ToInsertTest {
 			sqlTranslator.toInsert(obj);
 		});
 		
-		assertEquals(SQLTranslator.NOT_SUPPORTED_RELATION_ERROR, exception.getMessage());
+		assertEquals(TranslationErrors.NOT_SUPPORTED_RELATION_ERROR, exception.getMessage());
 	}
 	
 	@Test
@@ -70,7 +71,7 @@ public class ToInsertTest {
 			sqlTranslator.toInsert(obj);
 		});
 		
-		assertEquals(SQLTranslator.MISSING_TABLE_ANNOTATION_ERROR + obj.getField3().getClass().getSimpleName(), exception.getMessage());
+		assertEquals(TranslationErrors.MISSING_TABLE_ANNOTATION_ERROR + obj.getField3().getClass().getSimpleName(), exception.getMessage());
 	}
 	
 	@Test
@@ -80,7 +81,7 @@ public class ToInsertTest {
 			sqlTranslator.toInsert(obj);
 		});
 		
-		assertEquals(SQLTranslator.MISSING_FIELD_ANNOTATION_ERROR + 
+		assertEquals(TranslationErrors.MISSING_FIELD_ANNOTATION_ERROR + 
 						obj.getField1().getClass().getDeclaredField("field1").getName(), exception.getMessage());
 	}
 	

@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Scope;
 import com.healthsparq.app.model.xprod.Product;
 import com.healthsparq.app.model.xprod.client.Client;
 import com.healthsparq.app.model.xprod.client.ClientConfgr;
-import com.healthsparq.app.util.SQLTranslator;
+import com.healthsparq.app.util.sqltranslator.SQLTranslatorImpl;
 
 @Configuration
 public class TestConfig {
@@ -34,7 +34,7 @@ public class TestConfig {
 	}
 	
 	@Bean
-	public SQLTranslator sqlTranslator() {
-		return new SQLTranslator();
+	public SQLTranslatorImpl sqlTranslator() {
+		return new SQLTranslatorImpl();
 	}
 }
