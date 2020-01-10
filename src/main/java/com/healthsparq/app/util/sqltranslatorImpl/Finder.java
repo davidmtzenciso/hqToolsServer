@@ -1,4 +1,6 @@
-package com.healthsparq.app.util.sqltranslator;
+package com.healthsparq.app.util.sqltranslatorImpl;
+
+import static com.healthsparq.app.util.sqltranslatorImpl.TranslationErrors.NOT_SUPPORTED_TYPE_ERROR;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -13,14 +15,17 @@ import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
-import com.healthsparq.app.exceptions.MetadataNotPresentException;
-import com.healthsparq.app.exceptions.NoValuePresentException;
-import com.healthsparq.app.exceptions.PrimitiveTypeNotSupportedException;
-import com.healthsparq.app.exceptions.RelationNotSupportedException;
+import org.springframework.stereotype.Component;
 
-public abstract class AbstractSQLTranslator {
+import com.healthsparq.app.util.sqltranslator.exceptions.MetadataNotPresentException;
+import com.healthsparq.app.util.sqltranslator.exceptions.NoValuePresentException;
+import com.healthsparq.app.util.sqltranslator.exceptions.PrimitiveTypeNotSupportedException;
+import com.healthsparq.app.util.sqltranslator.exceptions.RelationNotSupportedException;
 
-	protected Table getAnnotation(final Class<?> cls) throws NoValuePresentException, MetadataNotPresentException {
+@Component
+final class Finder {
+
+	public Table findAnnotation(final Class<?> cls) throws NoValuePresentException, MetadataNotPresentException {
 		Table table;
 		
 		if(cls.isAnnotationPresent(Table.class)) {
@@ -34,7 +39,7 @@ public abstract class AbstractSQLTranslator {
 		return table;
 	}
 	
-	protected Annotation getAnnotation(final Field field) throws RelationNotSupportedException, 
+	public Annotation findAnnotation(final Field field) throws RelationNotSupportedException, 
 														MetadataNotPresentException, NoValuePresentException {
 		
 		if(field.isAnnotationPresent(OneToMany.class) || field.isAnnotationPresent(OneToOne.class)) {
@@ -52,7 +57,7 @@ public abstract class AbstractSQLTranslator {
 		}
 	}
 	
-	protected Map<Field, Object> findFieldsWithValue(Class<?> cls, final Object target) throws 
+	public Map<Field, Object> findFields(Class<?> cls, final Object target) throws 
 																						ReflectiveOperationException, 
 																						NoValuePresentException, 
 																						PrimitiveTypeNotSupportedException {
@@ -61,7 +66,7 @@ public abstract class AbstractSQLTranslator {
 		
 		for (Field field :  cls.getDeclaredFields()) {
 			if (!Modifier.isStatic(field.getModifiers())) {
-				value = this.getValueFromColumn(field, target, cls);
+				value = this.findValueInField(field, target, cls);
 				if (value != null) {
 				fields.put(field, value);
 				}
@@ -75,7 +80,7 @@ public abstract class AbstractSQLTranslator {
 		}
 	}
 	
-	protected Field findIdField(Class<?> cls) {
+	public Field findIdField(Class<?> cls) {
 		for(Field field : cls.getDeclaredFields()) {
 			if (field.isAnnotationPresent(Id.class)) {
 				return field;
@@ -84,27 +89,7 @@ public abstract class AbstractSQLTranslator {
 		return null;
 	}
 	
-	protected String getValueFromColumn(Field field, Object target, Class<?> cls) throws 
-																					PrimitiveTypeNotSupportedException, 
-																					ReflectiveOperationException {
-		var builder = new StringBuilder();
-		var value = cls.getMethod(getMethodName(field.getName())).invoke(target);
-		
-		if(field.getType().getSimpleName().equals(String.class.getSimpleName())) {
-			builder.append("'").append(value).append("'");
-		} else if(field.getType().getSimpleName().equals(Integer.class.getSimpleName())) {
-			builder.append(value);
-		} else {
-			throw new PrimitiveTypeNotSupportedException(TranslationErrors.NOT_SUPPORTED_TYPE_ERROR+ field.getType().getSimpleName());
-		}
-		return builder.toString();
-	}
-	
-	protected String getMethodName(String fieldName) {
-		return "get" + String.valueOf(fieldName.charAt(0)).toUpperCase() + fieldName.substring(1, fieldName.length());
-	}
-	
-	protected String getColumnName(final Field field, final Annotation annotation) throws ReflectiveOperationException,
+	public String findColumnName(final Field field, final Annotation annotation) throws ReflectiveOperationException,
 																						MetadataNotPresentException, 
 																						RelationNotSupportedException, 
 																						NoValuePresentException {
@@ -114,9 +99,29 @@ public abstract class AbstractSQLTranslator {
 			return ((Column) annotation).name();
 		} else if(annotation instanceof ManyToOne) {
 			innerField = findIdField(field.getType());
-			return getColumnName(innerField, getAnnotation(innerField));
+			return findColumnName(innerField, findAnnotation(innerField));
 		} else {
 			return null;
 		}
+	}
+	
+	public String findValueInField(Field field, Object target, Class<?> cls) throws 
+																				PrimitiveTypeNotSupportedException, 
+																				ReflectiveOperationException {
+		var builder = new StringBuilder();
+		var value = cls.getMethod(getMethodName(field.getName())).invoke(target);
+		
+		if(field.getType().getSimpleName().equals(String.class.getSimpleName())) {
+			builder.append("'").append(value).append("'");
+		} else if(field.getType().getSimpleName().equals(Integer.class.getSimpleName())) {
+			builder.append(value);
+		} else {
+			throw new PrimitiveTypeNotSupportedException(NOT_SUPPORTED_TYPE_ERROR + field.getType().getSimpleName());
+		}
+		return builder.toString();
+	}
+	
+	private String getMethodName(String fieldName) {
+		return "get" + String.valueOf(fieldName.charAt(0)).toUpperCase() + fieldName.substring(1, fieldName.length());
 	}
 }

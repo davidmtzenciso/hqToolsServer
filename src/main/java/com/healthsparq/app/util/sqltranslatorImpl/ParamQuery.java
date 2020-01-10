@@ -1,4 +1,4 @@
-package com.healthsparq.app.util.sqltranslator;
+package com.healthsparq.app.util.sqltranslatorImpl;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -8,24 +8,31 @@ import java.util.Map.Entry;
 import javax.persistence.Column;
 import javax.persistence.Table;
 
-import com.healthsparq.app.exceptions.MetadataNotPresentException;
-import com.healthsparq.app.exceptions.NoValuePresentException;
-import com.healthsparq.app.exceptions.PrimitiveTypeNotSupportedException;
-import com.healthsparq.app.exceptions.RelationNotSupportedException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
-public class ParamQuery extends AbstractSQLTranslator {
+import com.healthsparq.app.util.sqltranslator.exceptions.MetadataNotPresentException;
+import com.healthsparq.app.util.sqltranslator.exceptions.NoValuePresentException;
+import com.healthsparq.app.util.sqltranslator.exceptions.PrimitiveTypeNotSupportedException;
+import com.healthsparq.app.util.sqltranslator.exceptions.RelationNotSupportedException;
+
+@Component
+final class ParamQuery  {
 
 	public static final String SELECT = "SELECT ";
 	public static final String DELETE = "DELETE ";
+	
+	@Autowired
+	private Finder finder;
 	
 	public String translate(String sufix, Object obj) throws NoValuePresentException, MetadataNotPresentException, 
 														PrimitiveTypeNotSupportedException, RelationNotSupportedException, 
 														ReflectiveOperationException {
 		Class<?> cls = obj.getClass();
-		Table table = getAnnotation(cls);
-		Field id = findIdField(cls);
-		Annotation annotation = getAnnotation(id);
-		return new StringBuilder().append("SELECT ").append(getColumnName(id, annotation))
+		Table table = finder.findAnnotation(cls);
+		Field id = finder.findIdField(cls);
+		Annotation annotation = finder.findAnnotation(id);
+		return new StringBuilder().append("SELECT ").append(finder.findColumnName(id, annotation))
 		.append(getParameteredQuery(cls, obj, table)).toString();
 		
 	}
@@ -34,7 +41,7 @@ public class ParamQuery extends AbstractSQLTranslator {
 													NoValuePresentException, MetadataNotPresentException, 
 													PrimitiveTypeNotSupportedException, RelationNotSupportedException,
 													ReflectiveOperationException {
-			var fields  = findFieldsWithValue(cls, target);
+			var fields  = finder.findFields(cls, target);
 			var builder = new StringBuilder();
 			
 			return builder.append(" FROM ").append(table).append(getQueryConditionals(fields))

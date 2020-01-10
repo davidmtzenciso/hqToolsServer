@@ -8,11 +8,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import com.healthsparq.app.exceptions.MetadataNotPresentException;
-import com.healthsparq.app.exceptions.PrimitiveTypeNotSupportedException;
-import com.healthsparq.app.exceptions.RelationNotSupportedException;
-import com.healthsparq.app.util.sqltranslator.SQLTranslatorImpl;
-import com.healthsparq.app.util.sqltranslator.TranslationErrors;
+import com.healthsparq.app.util.sqltranslator.exceptions.MetadataNotPresentException;
+import com.healthsparq.app.util.sqltranslator.exceptions.PrimitiveTypeNotSupportedException;
+import com.healthsparq.app.util.sqltranslator.exceptions.RelationNotSupportedException;
+import com.healthsparq.app.util.sqltranslatorImpl.SQLTranslatorImpl;
 import com.healthsparq.app.util.unit.conf.TestConfig;
 import com.healthsparq.app.util.unit.sqltranslator.model.*;
 

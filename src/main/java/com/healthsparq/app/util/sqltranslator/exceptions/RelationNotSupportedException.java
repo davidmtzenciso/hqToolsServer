@@ -1,4 +1,4 @@
-package com.healthsparq.app.exceptions;
+package com.healthsparq.app.util.sqltranslator.exceptions;
 
 public class RelationNotSupportedException extends Exception {
 

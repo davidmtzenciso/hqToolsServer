@@ -1,4 +1,4 @@
-package com.healthsparq.app.util.sqltranslator;
+package com.healthsparq.app.util.sqltranslatorImpl;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -15,23 +15,23 @@ import javax.persistence.Table;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import com.healthsparq.app.exceptions.MetadataNotPresentException;
-import com.healthsparq.app.exceptions.NoValuePresentException;
-import com.healthsparq.app.exceptions.PrimitiveTypeNotSupportedException;
-import com.healthsparq.app.exceptions.RelationNotSupportedException;
+import com.healthsparq.app.util.sqltranslator.exceptions.*;
 
 @Component
-public class InsertSQLTranslator extends AbstractSQLTranslator {
+final class InsertSQLTranslator {
 	
 	@Autowired
 	private ParamQuery query;
+	
+	@Autowired
+	private Finder finder;
 
 	public String translate(Object obj) throws ReflectiveOperationException,MetadataNotPresentException, 
 												PrimitiveTypeNotSupportedException, NoValuePresentException, 
 												RelationNotSupportedException {
 		List<Field> fields;
 		Class<?> cls = obj.getClass();
-		Table table = getAnnotation(cls);
+		Table table = finder.findAnnotation(cls);
 		
 		fields = Arrays.asList(cls.getDeclaredFields())
 		.stream().sorted(Comparator.comparing(Field::getName))
@@ -52,8 +52,8 @@ public class InsertSQLTranslator extends AbstractSQLTranslator {
 		
 		for(Field field: fields) {
 			if(!Modifier.isStatic(field.getModifiers())) {
-				annotation = getAnnotation(field);
-				builder.append(getColumnName(field, annotation));
+				annotation = finder.findAnnotation(field);
+				builder.append(finder.findColumnName(field, annotation));
 				builder.append(", ");
 			}
 		}
@@ -73,7 +73,7 @@ public class InsertSQLTranslator extends AbstractSQLTranslator {
 		
 		for(Field field : fields) {
 			if(!Modifier.isStatic(field.getModifiers())) {
-				annotation = getAnnotation(field);
+				annotation = finder.findAnnotation(field);
 				builder.append(getValue(annotation, cls, field, target)).append(", ");
 			}
 		}
@@ -82,15 +82,18 @@ public class InsertSQLTranslator extends AbstractSQLTranslator {
 	}
 
 	private Object getValue(Annotation annotation, Class<?> cls, Field field, Object target) throws 
-											NoValuePresentException, MetadataNotPresentException, 
-											PrimitiveTypeNotSupportedException, RelationNotSupportedException,
-											ReflectiveOperationException {	
+																							NoValuePresentException, MetadataNotPresentException, 
+																							PrimitiveTypeNotSupportedException, RelationNotSupportedException,
+																							ReflectiveOperationException {	
 		if(annotation instanceof Column) {
-			return getValueFromColumn(field, target, cls);
+			return finder.findValueInField(field, target, cls);
 		} else if(annotation instanceof ManyToOne) {
 			return query.translate(ParamQuery.SELECT, cls.getMethod(getMethodName(field.getName())).invoke(target) );
 		} 
 		return null;
 	}
 	
+	private String getMethodName(String fieldName) {
+		return "get" + String.valueOf(fieldName.charAt(0)).toUpperCase() + fieldName.substring(1, fieldName.length());
+	}
 }
